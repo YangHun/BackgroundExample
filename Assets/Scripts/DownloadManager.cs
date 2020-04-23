@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Events;
 
@@ -11,6 +9,8 @@ public class DownloadManager : MonoBehaviour
 
     public static UnityAction<int> OnGetFileCount;
     public static UnityAction<string> OnSuccessDownload;
+    public static UnityAction<string> OnDisconnectNetwork;
+
 
     public static bool IsDownloading
     {
@@ -20,10 +20,9 @@ public class DownloadManager : MonoBehaviour
     private void Start()
     {
         this.gameObject.name = "DownloadManager";
-        
         DontDestroyOnLoad(this.gameObject);
     }
-
+    
     public static void StartDownloadByFolder(string storagePath)
     {
         if (isRunning) return;
@@ -34,11 +33,16 @@ public class DownloadManager : MonoBehaviour
         obj.Call("startDownloadFromUnity", FirebaseConfig.STORAGE_URL, storagePath);
         isRunning = true;
     }
-
+    
     public void OnSuccessRetrievePath(string msg)
     {
         int.TryParse(msg, out int value);
         OnGetFileCount?.Invoke(value);
+    }
+
+    public void OnDisconnectToServer(string msg)
+    {
+        OnDisconnectNetwork?.Invoke(msg);
     }
 
     public void OnSuccessDownloadFile(string msg)

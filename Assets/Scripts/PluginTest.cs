@@ -22,16 +22,16 @@ public class PluginTest : MonoBehaviour
         progressText.text = "대기 중 - Background 전환 시 다운로드를 시작합니다";
 
         DownloadManager.OnSuccessDownload += UpdateDownloadedCount;
+        DownloadManager.OnDisconnectNetwork += OnDisconnected;
         DownloadManager.OnGetFileCount += InitProgressText;
 
-        LocalNotification.SendNotification(1, t, "Send Notification Test Call!", "Yee", Color.white, true, true, true, "app_icon", null, "default");
     }
 
     private void InitProgressText(int value)
     {
         this.totalFiles = value;
         this.downloadedFiles = 0;
-        UpdateProgressText();
+        progressText.text = string.Format("리소스 다운로드 중 ( {0} / {1} )", downloadedFiles, totalFiles);
     }
 
     private void UpdateDownloadedFilePath(string path)
@@ -43,15 +43,18 @@ public class PluginTest : MonoBehaviour
     {
         if (this.downloadedFiles >= this.totalFiles) return;
         ++this.downloadedFiles;
-        UpdateProgressText();
+
+        progressText.text =
+            (this.downloadedFiles < this.totalFiles) 
+            ? string.Format("리소스 다운로드 중 ( {0} / {1} )", downloadedFiles, totalFiles)
+            : string.Format("다운로드 완료! ( {0} / {1} )", downloadedFiles, totalFiles);
     }
 
-    private void UpdateProgressText()
+    private void OnDisconnected(string msg)
     {
-        progressText.text = string.Format("리소스 다운로드 중 ( {0} / {1} )", downloadedFiles, totalFiles);
+        progressText.text = string.Format("다운로드가 중단되었습니다.\n인터넷 연결 확인 후, 다시 시도해주세요.\n\n( Background 전환 시 다운로드를 시작합니다 )");
     }
 
-    
 
     private void OnApplicationPause(bool pause)
     {
@@ -73,5 +76,6 @@ public class PluginTest : MonoBehaviour
     {
         DownloadManager.OnSuccessDownload -= UpdateDownloadedCount;
         DownloadManager.OnGetFileCount -= InitProgressText;
+        DownloadManager.OnDisconnectNetwork -= OnDisconnected;
     }
 }

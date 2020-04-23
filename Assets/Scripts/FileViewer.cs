@@ -4,7 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
 using UnityEngine.Assertions;
-using UnityEngine.Events;
+using System.Threading.Tasks;
+using System.Text;
 
 public class FileViewer : MonoBehaviour
 {
@@ -18,21 +19,24 @@ public class FileViewer : MonoBehaviour
         };
 
         public Type type;
-        public Sprite image;
+        public Sprite sprite;
         public string text;
+        public string path;
     
-        public Content(Sprite image)
+        public Content(string path, Sprite sprite)
         {
-            this.image = image;
+            this.sprite = sprite;
             this.type = Type.Image;
             this.text = null;
+            this.path = path;
         }
 
-        public Content(string text)
+        public Content(string path, string text)
         {
-            this.image = null;
+            this.sprite = null;
             this.type = Type.Text;
             this.text = text;
+            this.path = path;
         }
     }
 
@@ -45,9 +49,14 @@ public class FileViewer : MonoBehaviour
     Image previewImage;
     [SerializeField]
     Text previewText;
+    [SerializeField]
+    Text infoText;
 
     List<string> filePath = new List<string>();
+
     Dictionary<int, Content> cache = new Dictionary<int, Content>();
+
+    Material imgMaterial;
 
     int cursor = -1;
 
@@ -57,6 +66,9 @@ public class FileViewer : MonoBehaviour
         right.interactable = false;
         previewText.gameObject.SetActive(false);
         previewImage.gameObject.SetActive(false);
+        infoText.text = "";
+
+        imgMaterial = previewImage.material;
 
         left.onClick.AddListener(OnClickLeft);
         right.onClick.AddListener(OnClickRight);
@@ -72,7 +84,7 @@ public class FileViewer : MonoBehaviour
         }
     }
 
-    private void CacheContent(int index)
+    private async void CacheContent(int index)
     {
         string path = filePath[index];
         Assert.IsTrue(File.Exists(path));
@@ -80,24 +92,50 @@ public class FileViewer : MonoBehaviour
 
         if (info.Extension.Equals(".png") || info.Extension.Equals(".jpg"))
         {
-            StartCoroutine(LoadImage(index));            
+            await Task.Yield();
+            byte[] data = await Task.Run(() => ReadFileAsync(index));
+            int size = (int)(Mathf.Sqrt(data.Length / 4.0f));
+
+            Texture2D tex = new Texture2D(size, size);
+            await Task.Yield();
+            tex.LoadImage(data);
+
+            await Task.Yield();
+            Sprite sprite = Sprite.Create(tex, new Rect(0.0f, 0.0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+
+            cache.Add(index, new Content(filePath[index], sprite));
+            MoveTo(cursor);
         }
         else if (info.Extension.Equals(".txt"))
         {
-            StartCoroutine(LoadText(index));
+            await Task.Yield();
+            byte[] data = await ReadFileAsync(index);
+            cache.Add(index, new Content(filePath[index], Encoding.Default.GetString(data)));
+            MoveTo(cursor);
         }
     }
 
     private bool TryShowContent(int index)
     {
+        if (cache.Count < filePath.Count) return false;
+
         Content content = cache.ContainsKey(index) ? cache[index] : null;
         if (content == null) return false;
 
-        if (content.type == Content.Type.Image) previewImage.sprite = content.image;
-        else if (content.type == Content.Type.Text) previewText.text = content.text;
+        if (content.type == Content.Type.Image)
+        {
+            previewImage.sprite = content.sprite;
+        }
+        else if (content.type == Content.Type.Text)
+        {
+            previewText.text = content.text;
+        }
+
+        infoText.text = string.Format("{0}\n cursor = {1}",content.path, cursor);
 
         previewImage.gameObject.SetActive(content.type == Content.Type.Image);
         previewText.gameObject.SetActive(content.type == Content.Type.Text);
+
         
         return true;
     }
@@ -111,6 +149,12 @@ public class FileViewer : MonoBehaviour
         {
             right.interactable = !(cursor >= filePath.Count - 1);
             left.interactable = !(cursor <= 0);
+        }
+        else
+        {
+            previewText.text = "( Loading ... )";
+            previewImage.gameObject.SetActive(false);
+            previewText.gameObject.SetActive(true);
         }
     }
 
@@ -131,37 +175,23 @@ public class FileViewer : MonoBehaviour
         DownloadManager.OnSuccessDownload -= UpdatePreviewList;
     }
 
-    private IEnumerator LoadImage(int index)
+    private async Task<byte[]> ReadFileAsync(int index)
     {
-        byte[] data = File.ReadAllBytes(filePath[index]);
-        yield return null;
-
-        Texture2D tex = new Texture2D(2, 2);
-        tex.LoadImage(data);
-        yield return null;
-
-        Sprite sprite = Sprite.Create(tex, new Rect(0.0f, 0.0f, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100.0f);
-
-        cache.Add(index, new Content(sprite));
-
-        // update current UI
-        MoveTo(cursor);
-        yield return null;
-    }
-
-    private IEnumerator LoadText(int index)
-    {
-        using (StreamReader reader = new StreamReader(filePath[index]))
+        using (MemoryStream memStream = new MemoryStream(1000))
         {
-            char[] buffer = new char[101];
-            reader.Read(buffer, 0, 100);
-            yield return null;
-
-            cache.Add(index, new Content(string.Concat(buffer)));
+            using (FileStream fileStream = new FileStream(filePath[index], FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+            {
+                byte[] buffer = new byte[1024];
+                int numRead = 0;
+                while ((numRead = await fileStream.ReadAsync(buffer, 0, buffer.Length)) != 0)
+                {
+                    await memStream.WriteAsync(buffer, 0, numRead);
+                }
+            }
+                       
+            return memStream.ToArray();
         }
-
-        // update current UI
-        MoveTo(cursor);
-        yield return null;
     }
+
+    
 }
