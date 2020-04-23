@@ -9,7 +9,8 @@ public class DownloadManager : MonoBehaviour
     static AndroidJavaClass activity = null;
     static bool isRunning = false;
 
-    public static UnityAction<string> OnSuccess;
+    public static UnityAction<int> OnGetFileCount;
+    public static UnityAction<string> OnSuccessDownload;
 
     public static bool IsDownloading
     {
@@ -34,8 +35,19 @@ public class DownloadManager : MonoBehaviour
         isRunning = true;
     }
 
-    public void OnSuccessDownloadFile(string localPath)
+    public void OnSuccessRetrievePath(string msg)
     {
-        OnSuccess?.Invoke(localPath);
+        int.TryParse(msg, out int value);
+        OnGetFileCount?.Invoke(value);
+    }
+
+    public void OnSuccessDownloadFile(string msg)
+    {
+        OnSuccessDownload?.Invoke(msg);
+    }
+
+    public void OnDestroyService(string msg)
+    {
+        isRunning = false;
     }
 }
