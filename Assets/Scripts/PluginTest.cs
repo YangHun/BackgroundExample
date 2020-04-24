@@ -34,11 +34,6 @@ public class PluginTest : MonoBehaviour
         progressText.text = string.Format("리소스 다운로드 중 ( {0} / {1} )", downloadedFiles, totalFiles);
     }
 
-    private void UpdateDownloadedFilePath(string path)
-    {
-        progressText.text = "last downloaded: " + path;
-    }
-
     private void UpdateDownloadedCount(string msg)
     {
         if (this.downloadedFiles >= this.totalFiles) return;
@@ -70,6 +65,11 @@ public class PluginTest : MonoBehaviour
         {
 
         }
+    }
+
+    private void OnApplicationQuit()
+    {
+        DownloadManager.Shutdown();
     }
 
     private void OnDestroy()

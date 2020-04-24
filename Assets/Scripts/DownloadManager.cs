@@ -34,6 +34,16 @@ public class DownloadManager : MonoBehaviour
         isRunning = true;
     }
     
+    public static void Shutdown()
+    {
+        if (!isRunning || activity == null) return;
+        var obj = activity.GetStatic<AndroidJavaObject>("currentActivity");
+        Assert.IsNotNull(obj, "UnityPlayerActivity is null");
+
+        obj.Call("shutdownFromUnity");
+        isRunning = false;
+    }
+
     public void OnSuccessRetrievePath(string msg)
     {
         int.TryParse(msg, out int value);
@@ -52,6 +62,7 @@ public class DownloadManager : MonoBehaviour
 
     public void OnDestroyService(string msg)
     {
-        isRunning = false;
+        // Download event only occurs once
+        // isRunning = false;
     }
 }

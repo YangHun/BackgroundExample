@@ -77,21 +77,34 @@ public class FileViewer : MonoBehaviour
 
     private void UpdatePreviewList(string msg)
     {
+        if (filePath.Count < 1)
+        {
+            previewText.gameObject.SetActive(true);
+            previewImage.gameObject.SetActive(false);
+            previewText.text = "( Loading ... )";
+        }
+
         if (!filePath.Contains(msg))
         {
             filePath.Add(msg);
             CacheContent(filePath.Count - 1);
+            MoveTo(cursor);
         }
     }
 
     private async void CacheContent(int index)
     {
+        if (cache.ContainsKey(index)) return;
+
         string path = filePath[index];
         Assert.IsTrue(File.Exists(path));
         FileInfo info = new FileInfo(path);
 
         if (info.Extension.Equals(".png") || info.Extension.Equals(".jpg"))
         {
+            Content content = new Content(filePath[index], default(Sprite));
+            cache.Add(index, content);
+
             await Task.Yield();
             byte[] data = await Task.Run(() => ReadFileAsync(index));
             int size = (int)(Mathf.Sqrt(data.Length / 4.0f));
@@ -103,22 +116,26 @@ public class FileViewer : MonoBehaviour
             await Task.Yield();
             Sprite sprite = Sprite.Create(tex, new Rect(0.0f, 0.0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
 
-            cache.Add(index, new Content(filePath[index], sprite));
-            MoveTo(cursor);
+            cache.Remove(index);
+            content.sprite = sprite;
+            cache.Add(index, content);
         }
         else if (info.Extension.Equals(".txt"))
         {
+            Content content = new Content(filePath[index], default(Sprite));
+            cache.Add(index, content);
+
             await Task.Yield();
             byte[] data = await ReadFileAsync(index);
-            cache.Add(index, new Content(filePath[index], Encoding.Default.GetString(data)));
-            MoveTo(cursor);
+
+            cache.Remove(index);
+            content.text = Encoding.Default.GetString(data);
+            cache.Add(index, content);
         }
     }
 
     private bool TryShowContent(int index)
     {
-        if (cache.Count < filePath.Count) return false;
-
         Content content = cache.ContainsKey(index) ? cache[index] : null;
         if (content == null) return false;
 
