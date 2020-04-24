@@ -1,7 +1,7 @@
 # Implementation Description
 
-Unity C#: https://github.com/YangHun/BackgroundExample
-android plugin: https://github.com/YangHun/BackgroundExample-Plugin
+Unity C# code: https://github.com/YangHun/BackgroundExample    
+android plugin code: https://github.com/YangHun/BackgroundExample-Plugin
 
 
 ### DownloadManager.cs
