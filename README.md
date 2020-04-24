@@ -1,5 +1,9 @@
 # Implementation Description
 
+Unity C#: https://github.com/YangHun/BackgroundExample
+android plugin: https://github.com/YangHun/BackgroundExample-Plugin
+
+
 ### DownloadManager.cs
 : UnityPlayerActivity를 통해 Android native plugin과 통신합니다. 
 Foreground Service를 실행하고, Service로부터 Message를 전달받아 처리합니다.
